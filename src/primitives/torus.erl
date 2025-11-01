@@ -1,18 +1,28 @@
 -module(torus).
--export([new/4, intersect/2, normal/2]).
+-export([new/4, new/5, intersect/2, normal/2]).
 
 %% Torus primitive for raytracing
 %% This is the most complex primitive, requiring solving a quartic equation
 %% A torus is defined by major radius R (from center to tube center)
 %% and minor radius r (tube radius)
+%% Supports rotation via transformation matrix
 
-%% Creates a new torus
+%% Creates a new axis-aligned torus (aligned with Y-axis)
 %% Center: center position {X, Y, Z}
 %% MajorRadius: distance from torus center to tube center
 %% MinorRadius: tube radius
 %% Material: material properties
 new(Center, MajorRadius, MinorRadius, Material) ->
-    {torus, Center, MajorRadius, MinorRadius, Material}.
+    {torus, Center, mat3:identity(), MajorRadius, MinorRadius, Material}.
+
+%% Creates a new oriented (rotated) torus
+%% Center: center position {X, Y, Z}
+%% Rotation: 3x3 rotation matrix (from mat3 module)
+%% MajorRadius: distance from torus center to tube center
+%% MinorRadius: tube radius
+%% Material: material properties
+new(Center, Rotation, MajorRadius, MinorRadius, Material) ->
+    {torus, Center, Rotation, MajorRadius, MinorRadius, Material}.
 
 %% Ray-torus intersection
 %% Returns {true, Distance, Material} if hit, false otherwise
@@ -20,15 +30,17 @@ new(Center, MajorRadius, MinorRadius, Material) ->
 %% This is complex because it requires solving a quartic (4th degree) equation
 %% For educational purposes, we use an iterative numerical approach
 %% rather than implementing a full quartic solver
-intersect({torus, Center, MajorR, MinorR, Material}, Ray) ->
+intersect({torus, Center, Rotation, MajorR, MinorR, Material}, Ray) ->
     {ray, Origin, Direction} = Ray,
 
     %% Transform ray to torus local space
-    LocalOrigin = vec3:sub(Origin, Center),
+    RotationInv = mat3:transpose(Rotation),
+    LocalOrigin = mat3:mul_vec3(RotationInv, vec3:sub(Origin, Center)),
+    LocalDirection = mat3:mul_vec3(RotationInv, Direction),
 
     %% Use numerical ray marching as a simplified approach
     %% This is more stable than solving the quartic analytically
-    march_torus(LocalOrigin, Direction, MajorR, MinorR, Material, 0.001, 0.0, 100).
+    march_torus(LocalOrigin, LocalDirection, MajorR, MinorR, Material, 0.001, 0.0, 100).
 
 %% Numerical ray marching to find torus intersection
 %% We step along the ray and check the signed distance function
@@ -75,17 +87,18 @@ torus_sdf({X, Y, Z}, MajorR, MinorR) ->
 
 %% Calculate surface normal at a point on the torus
 %% Use gradient of the signed distance function
-normal({torus, Center, MajorR, MinorR, _Material}, Point) ->
+normal({torus, Center, Rotation, MajorR, MinorR, _Material}, Point) ->
     %% Transform to local space
-    LocalPoint = vec3:sub(Point, Center),
+    RotationInv = mat3:transpose(Rotation),
+    LocalPoint = mat3:mul_vec3(RotationInv, vec3:sub(Point, Center)),
     {X, Y, Z} = LocalPoint,
 
-    %% Compute normal using analytical gradient
+    %% Compute normal using analytical gradient in local space
     %% This is the gradient of the torus SDF
     QX = math:sqrt(X * X + Z * Z),
 
     %% Handle the case where we're exactly on the Y-axis
-    if
+    LocalNormal = if
         QX < 0.0001 ->
             %% Degenerate case, use approximate normal
             {0.0, 1.0, 0.0};
@@ -93,4 +106,7 @@ normal({torus, Center, MajorR, MinorR, _Material}, Point) ->
             Factor = 1.0 - MajorR / QX,
             Normal = {X * Factor, Y, Z * Factor},
             vec3:normalize(Normal)
-    end.
+    end,
+
+    %% Transform normal back to world space
+    mat3:mul_vec3(Rotation, LocalNormal).

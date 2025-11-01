@@ -13,10 +13,11 @@ default_scene() ->
         material:new({0.9, 0.9, 0.9}, 1.0, 0.0)  % White diffuse
     ),
 
-    %% Metal cube (silver-ish with roughness)
-    %% Note: rotation not yet implemented, using position only
+    %% Metal cube (silver-ish with roughness) - tilted for oriented box demo
+    %% Rotation: mat3_from_euler(0.0f, 30.0f, 10.0f) - yaw 30°, roll 10°
     Cube = cube:new(
         {1.4, -0.3, 5.5},     % Center position
+        mat3:from_euler(0.0, 30.0, 10.0),  % Rotation (pitch, yaw, roll in degrees)
         0.9,                   % Half-size (1.8 / 2)
         material:new({0.85, 0.84, 0.80}, 0.35, 1.0)  % Metallic silver
     ),
@@ -36,10 +37,11 @@ default_scene() ->
         material:new({0.15, 0.35, 0.70}, 1.0, 0.0)  % Blue diffuse
     ),
 
-    %% Gold metallic torus
-    %% Note: rotation not yet implemented, using position only
+    %% Gold metallic torus - rotated to highlight quartic intersection solver
+    %% Rotation: mat3_from_euler(20.0f, 35.0f, 0.0f) - pitch 20°, yaw 35°
     Torus = torus:new(
         {0.0, 0.5, 8.0},      % Position
+        mat3:from_euler(20.0, 35.0, 0.0),  % Rotation (pitch, yaw, roll in degrees)
         1.6,                   % Major radius
         0.4,                   % Minor radius
         material:new({0.95, 0.65, 0.25}, 0.25, 1.0)  % Gold metal
@@ -115,11 +117,11 @@ intersect_object({sphere, _Center, _Radius, _Mat} = Sphere, Ray) ->
     sphere:intersect(Sphere, Ray);
 intersect_object({plane, _Point, _Normal, _Mat} = Plane, Ray) ->
     plane:intersect(Plane, Ray);
-intersect_object({cube, _Center, _Size, _Mat} = Cube, Ray) ->
+intersect_object({cube, _Center, _Rotation, _Size, _Mat} = Cube, Ray) ->
     cube:intersect(Cube, Ray);
 intersect_object({cylinder, _Center, _Radius, _Height, _Mat} = Cylinder, Ray) ->
     cylinder:intersect(Cylinder, Ray);
-intersect_object({torus, _Center, _MajorR, _MinorR, _Mat} = Torus, Ray) ->
+intersect_object({torus, _Center, _Rotation, _MajorR, _MinorR, _Mat} = Torus, Ray) ->
     torus:intersect(Torus, Ray).
 
 %% Get surface normal for any object type
@@ -127,11 +129,11 @@ get_normal({sphere, _C, _R, _M} = Sphere, Point) ->
     sphere:normal(Sphere, Point);
 get_normal({plane, _P, _N, _M} = Plane, Point) ->
     plane:normal(Plane, Point);
-get_normal({cube, _C, _S, _M} = Cube, Point) ->
+get_normal({cube, _C, _Rot, _S, _M} = Cube, Point) ->
     cube:normal(Cube, Point);
 get_normal({cylinder, _C, _R, _H, _M} = Cylinder, Point) ->
     cylinder:normal(Cylinder, Point);
-get_normal({torus, _C, _MR, _mR, _M} = Torus, Point) ->
+get_normal({torus, _C, _Rot, _MR, _mR, _M} = Torus, Point) ->
     torus:normal(Torus, Point).
 
 %% Get material for an object (handling checkerboard special case)
@@ -141,11 +143,11 @@ get_material({plane, _Point, _Normal, Material}, _HitPoint) ->
     Material;
 get_material({sphere, _Center, _Radius, Material}, _HitPoint) ->
     Material;
-get_material({cube, _Center, _Size, Material}, _HitPoint) ->
+get_material({cube, _Center, _Rotation, _Size, Material}, _HitPoint) ->
     Material;
 get_material({cylinder, _Center, _Radius, _Height, Material}, _HitPoint) ->
     Material;
-get_material({torus, _Center, _MajorR, _MinorR, Material}, _HitPoint) ->
+get_material({torus, _Center, _Rotation, _MajorR, _MinorR, Material}, _HitPoint) ->
     Material.
 
 %% Check if point is in shadow (between hit point and light)
