@@ -1,6 +1,7 @@
 # Erlang Raytracer
 
 A CPU-based raytracer written entirely in **pure Erlang** with zero external dependencies, by Claude Sonnet 4.5.
+The implementation is based on the content of the `AGENTS.md` file.
 
 ## But... why?
 
@@ -22,16 +23,6 @@ Erlang output:
 
 ## Quick Start
 
-```bash
-# Compile
-mkdir -p ebin
-erlc -o ebin src/*.erl src/primitives/*.erl
-
-# Run (default 800x450)
-erl -pa ebin -noshell -s raytracer main -s init stop
-
-# Quick test (200x112)
-erl -pa ebin -noshell -eval 'raytracer:main(["200", "112"])' -s init stop
-```
-
-Output: `output.tga` (view with any image viewer)
+1. Install erlang. (`brew install erlang` is a nice way to do it if you have Homebrew installed)
+2. run `./build.sh`
+3. Open `output.tga`
